@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 // no limit to the number of payout requests that can be made of the same policy; however, only the first asserted
 // request will settle the insurance payment, whereas OOv3 will settle bonds for all requestors.
 contract Insurance {
+    
     using SafeERC20 for IERC20;
     IERC20 public immutable defaultCurrency;
     OptimisticOracleV3Interface public immutable oo;

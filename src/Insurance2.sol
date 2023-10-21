@@ -5,37 +5,35 @@ import "@uma/core/contracts/optimistic-oracle-v3/implementation/ClaimData.sol";
 import "@uma/core/contracts/optimistic-oracle-v3/interfaces/OptimisticOracleV3Interface.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-// This Isurance contract enables for the issuance of a single unlimited time policy per event/payout recipient There is
-// no limit to the number of payout requests that can be made of the same policy; however, only the first asserted
-// request will settle the insurance payment, whereas OOv3 will settle bonds for all requestors.
-contract Insurance2 {
+contract Publisher {
+
     using SafeERC20 for IERC20;
     IERC20 public immutable defaultCurrency;
     OptimisticOracleV3Interface public immutable oo;
     uint64 public constant assertionLiveness = 7200;
     bytes32 public immutable defaultIdentifier;
 
-    struct Policy {
-        uint256 insuranceAmount;
+    struct News {
+        uint256 rewardAmount;
         address payoutAddress;
-        bytes insuredEvent;
+        bytes newsEvent;
         bool settled;
     }
 
-    mapping(bytes32 => bytes32) public assertedPolicies;
+    mapping(bytes32 => bytes32) public assertedNews;
 
-    mapping(bytes32 => Policy) public policies;
+    mapping(bytes32 => News) public newsArticles;
 
-    event InsuranceIssued(
-        bytes32 indexed policyId,
-        bytes insuredEvent,
-        uint256 insuranceAmount,
+    event NewsPublished(
+        bytes32 indexed newsId,
+        bytes newsEvent,
+        uint256 rewardAmount,
         address indexed payoutAddress
     );
 
-    event InsurancePayoutRequested(bytes32 indexed policyId, bytes32 indexed assertionId);
+    event RewardPayoutRequested(bytes32 indexed newsId, bytes32 indexed assertionId);
 
-    event InsurancePayoutSettled(bytes32 indexed policyId, bytes32 indexed assertionId);
+    event RewardPayoutSettled(bytes32 indexed newsId, bytes32 indexed assertionId);
 
     constructor(address _defaultCurrency, address _optimisticOracleV3) {
         defaultCurrency = IERC20(_defaultCurrency);
@@ -43,35 +41,35 @@ contract Insurance2 {
         defaultIdentifier = oo.defaultIdentifier();
     }
 
-    function issueInsurance(
-        uint256 insuranceAmount,
+    function publishNews(
+        uint256 rewardAmount,
         address payoutAddress
-    ) public returns (bytes32 policyId) {
+    ) public returns (bytes32 newsId) {
         
-        bytes memory insuredEvent = "Subir Noticia";
-        policyId = keccak256(abi.encode(insuredEvent, payoutAddress));
-        require(policies[policyId].payoutAddress == address(0), "Policy already exists");
-        policies[policyId] = Policy({
-            insuranceAmount: insuranceAmount,
+        bytes memory newsEvent = "Subir Noticia";
+        newsId = keccak256(abi.encode(newsEvent, payoutAddress));
+        require(newsArticles[newsId].payoutAddress == address(0), "News already exists");
+        newsArticles[newsId] = News({
+            rewardAmount: rewardAmount,
             payoutAddress: payoutAddress,
-            insuredEvent: insuredEvent,
+            newsEvent: newsEvent,
             settled: false
         });
-        defaultCurrency.safeTransferFrom(msg.sender, address(this), insuranceAmount);
-        emit InsuranceIssued(policyId, insuredEvent, insuranceAmount, payoutAddress);
+        defaultCurrency.safeTransferFrom(msg.sender, address(this), rewardAmount);
+        emit NewsPublished(newsId, newsEvent, rewardAmount, payoutAddress);
     }
 
-    function requestPayout(bytes32 policyId,bytes memory insuredEvent)public returns (bytes32 assertionId) {
-        require(policies[policyId].payoutAddress != address(0), "Policy does not exist");
-        policies[policyId].insuredEvent = insuredEvent;
+    function requestPayout(bytes32 newsId,bytes memory newsEvent)public returns (bytes32 assertionId) {
+        require(newsArticles[newsId].payoutAddress != address(0), "News does not exist");
+        newsArticles[newsId].newsEvent = newsEvent;
         uint256 bond = oo.getMinimumBond(address(defaultCurrency));
         defaultCurrency.safeTransferFrom(msg.sender, address(this), bond);
         defaultCurrency.safeApprove(address(oo), bond);
         assertionId = oo.assertTruth(
             abi.encodePacked(
-                "Insurance contract is claiming that insurance event ",
-                policies[policyId].insuredEvent,
-                " had occurred as of ",
+                "News publisher is claiming that the news article ",
+                newsArticles[newsId].newsEvent,
+                " deserves a reward as of  ",
                 ClaimData.toUtf8BytesUint(block.timestamp),
                 "."
             ),
@@ -84,13 +82,13 @@ contract Insurance2 {
             defaultIdentifier,
             bytes32(0) // No domain.
         );
-        assertedPolicies[assertionId] = policyId;
-        emit InsurancePayoutRequested(policyId, assertionId);
+        assertedNews[assertionId] = newsId;
+        emit RewardPayoutRequested(newsId, assertionId);
     }
 
     function assertionResolvedCallback(bytes32 assertionId, bool assertedTruthfully) public {
         require(msg.sender == address(oo));
-        // If the assertion was true, then the policy is settled.
+        // If the assertion was true, then the news is settled.
         if (assertedTruthfully) {
             _settlePayout(assertionId);
         }
@@ -101,11 +99,11 @@ contract Insurance2 {
     function _settlePayout(bytes32 assertionId) internal {
         // If already settled, do nothing. We don't revert because this function is called by the
         // OptimisticOracleV3, which may block the assertion resolution.
-        bytes32 policyId = assertedPolicies[assertionId];
-        Policy storage policy = policies[policyId];
-        if (policy.settled) return;
-        policy.settled = true;
-        defaultCurrency.safeTransfer(policy.payoutAddress, policy.insuranceAmount);
-        emit InsurancePayoutSettled(policyId, assertionId);
+        bytes32 newsId = assertedNews[assertionId];
+        News storage news = newsArticles[newsId];
+        if (news.settled) return;
+        news.settled = true;
+        defaultCurrency.safeTransfer(news.payoutAddress, news.rewardAmount);
+        emit RewardPayoutSettled(newsId, assertionId);
     }
 }
