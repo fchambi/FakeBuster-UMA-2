@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 contract NewsVerification{
     
 
+
     uint256 public counter;
     using SafeERC20 for IERC20;
     IERC20 public immutable defaultCurrency;

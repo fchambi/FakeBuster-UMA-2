@@ -61,6 +61,7 @@ contract Publisher{
         emit NewsPublished(newsId, newsEvent, rewardAmount, payoutAddress);
     }
 
+
     function requestPayout(bytes32 newsId,bytes memory newsEvent)public returns (bytes32 assertionId) {
         require(newsArticles[newsId].payoutAddress == address(0), "News does not exist");
         newsArticles[newsId].newsEvent = newsEvent;
