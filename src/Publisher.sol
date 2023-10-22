@@ -50,7 +50,6 @@ contract Publisher{
         bytes memory newsEvent = "Subir Noticia";
         address payoutAddress = address(0);
         newsId = keccak256(abi.encode(newsEvent,payoutAddress,counter));
-        //require(newsArticles[newsId].payoutAddress == address(0), "News already exists");
         newsArticles[newsId] = News({
             rewardAmount: rewardAmount,
             payoutAddress: payoutAddress,
@@ -79,12 +78,12 @@ contract Publisher{
             ),
             msg.sender,
             address(this),
-            address(0), // No sovereign security.
+            address(0), 
             assertionLiveness,
             defaultCurrency,
             bond,
             defaultIdentifier,
-            bytes32(0) // No domain.
+            bytes32(0) 
         );
         assertedNews[assertionId] = newsId;
         emit RewardPayoutRequested(newsId, assertionId);
@@ -92,7 +91,6 @@ contract Publisher{
 
     function assertionResolvedCallback(bytes32 assertionId, bool assertedTruthfully) public {
         require(msg.sender == address(oo));
-        // If the assertion was true, then the news is settled.
         if (assertedTruthfully) {
             _settlePayout(assertionId);
         }
@@ -101,8 +99,6 @@ contract Publisher{
     function assertionDisputedCallback(bytes32 assertionId) public {}
 
     function _settlePayout(bytes32 assertionId) internal {
-        // If already settled, do nothing. We don't revert because this function is called by the
-        // OptimisticOracleV3, which may block the assertion resolution.
         bytes32 newsId = assertedNews[assertionId];
         News storage news = newsArticles[newsId];
         if (news.settled) return;

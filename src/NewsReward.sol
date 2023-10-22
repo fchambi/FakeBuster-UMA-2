@@ -5,9 +5,7 @@ import "@uma/core/contracts/optimistic-oracle-v3/implementation/ClaimData.sol";
 import "@uma/core/contracts/optimistic-oracle-v3/interfaces/OptimisticOracleV3Interface.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-// This Isurance contract enables for the issuance of a single unlimited time post per event/payout recipient There is
-// no limit to the number of payout requests that can be made of the same post; however, only the first asserted
-// request will settle the insurance payment, whereas OOv3 will settle bonds for all requestors.
+
 contract Newsreward {
     using SafeERC20 for IERC20;
     IERC20 public immutable defaultCurrency;

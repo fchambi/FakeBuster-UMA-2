@@ -51,7 +51,6 @@ contract NewsVerification{
 
         address verifierAddress = address(0);
         articleId = keccak256(abi.encode(newsContent, verifierAddress,counter));
-        //require(newsArticles[articleId].verifierAddress == address(0), "NewsArticle already exists");
         newsArticles[articleId] = NewsArticle({
             reward: reward,
             verifierAddress: verifierAddress,
@@ -79,12 +78,12 @@ contract NewsVerification{
             ),
             msg.sender,
             address(this),
-            address(0), // No sovereign security.
+            address(0), 
             assertionLiveness,
             defaultCurrency,
             bond,
             defaultIdentifier,
-            bytes32(0) // No domain.
+            bytes32(0)
         );
         assertedNews[assertionId] = articleId;
         emit RewardPayoutRequested(articleId, assertionId);
