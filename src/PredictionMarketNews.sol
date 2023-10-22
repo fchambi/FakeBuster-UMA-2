@@ -261,7 +261,7 @@ contract PredictionMarketNews is OptimisticOracleV3CallbackRecipientInterface {
                 url
             );
     }
-
+    
     function _assertTruthWithDefaults(bytes memory claim, uint256 bond) internal returns (bytes32 assertionId) {
         assertionId = oo.assertTruth(
             claim,
