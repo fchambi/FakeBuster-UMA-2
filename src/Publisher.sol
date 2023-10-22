@@ -5,8 +5,9 @@ import "@uma/core/contracts/optimistic-oracle-v3/implementation/ClaimData.sol";
 import "@uma/core/contracts/optimistic-oracle-v3/interfaces/OptimisticOracleV3Interface.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract Publisher {
+contract Publisher{
 
+    uint256 public counter;
     using SafeERC20 for IERC20;
     IERC20 public immutable defaultCurrency;
     OptimisticOracleV3Interface public immutable oo;
@@ -39,16 +40,17 @@ contract Publisher {
         defaultCurrency = IERC20(_defaultCurrency);
         oo = OptimisticOracleV3Interface(_optimisticOracleV3);
         defaultIdentifier = oo.defaultIdentifier();
+        counter=0;
     }
 
     function publishNews(
-        uint256 rewardAmount,
-        address payoutAddress
+        uint256 rewardAmount
     ) public returns (bytes32 newsId) {
         
         bytes memory newsEvent = "Subir Noticia";
-        newsId = keccak256(abi.encode(newsEvent, payoutAddress));
-        require(newsArticles[newsId].payoutAddress == address(0), "News already exists");
+        address payoutAddress = address(0);
+        newsId = keccak256(abi.encode(newsEvent,payoutAddress,counter));
+        //require(newsArticles[newsId].payoutAddress == address(0), "News already exists");
         newsArticles[newsId] = News({
             rewardAmount: rewardAmount,
             payoutAddress: payoutAddress,
@@ -56,12 +58,14 @@ contract Publisher {
             settled: false
         });
         defaultCurrency.safeTransferFrom(msg.sender, address(this), rewardAmount);
+        counter += 1;
         emit NewsPublished(newsId, newsEvent, rewardAmount, payoutAddress);
     }
 
     function requestPayout(bytes32 newsId,bytes memory newsEvent)public returns (bytes32 assertionId) {
-        require(newsArticles[newsId].payoutAddress != address(0), "News does not exist");
+        require(newsArticles[newsId].payoutAddress == address(0), "News does not exist");
         newsArticles[newsId].newsEvent = newsEvent;
+        newsArticles[newsId].payoutAddress = msg.sender;
         uint256 bond = oo.getMinimumBond(address(defaultCurrency));
         defaultCurrency.safeTransferFrom(msg.sender, address(this), bond);
         defaultCurrency.safeApprove(address(oo), bond);

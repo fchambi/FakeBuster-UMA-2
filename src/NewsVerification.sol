@@ -5,8 +5,10 @@ import "@uma/core/contracts/optimistic-oracle-v3/implementation/ClaimData.sol";
 import "@uma/core/contracts/optimistic-oracle-v3/interfaces/OptimisticOracleV3Interface.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract NewsVerification {
+contract NewsVerification{
     
+
+    uint256 public counter;
     using SafeERC20 for IERC20;
     IERC20 public immutable defaultCurrency;
     OptimisticOracleV3Interface public immutable oo;
@@ -31,23 +33,25 @@ contract NewsVerification {
         address indexed verifierAddress
     );
 
-    event RewardRequested(bytes32 indexed articleId, bytes32 indexed assertionId);
+    event RewardPayoutRequested(bytes32 indexed articleId, bytes32 indexed assertionId);
 
-    event RewardPaid(bytes32 indexed articleId, bytes32 indexed assertionId);
+    event RewardPayoutSettled(bytes32 indexed articleId, bytes32 indexed assertionId);
 
     constructor(address _defaultCurrency, address _optimisticOracleV3) {
         defaultCurrency = IERC20(_defaultCurrency);
         oo = OptimisticOracleV3Interface(_optimisticOracleV3);
         defaultIdentifier = oo.defaultIdentifier();
+        counter=0;
     }
 
     function verifyNews(
         uint256 reward,
-        address verifierAddress,
         bytes memory newsContent
     ) public returns (bytes32 articleId) {
-        articleId = keccak256(abi.encode(newsContent, verifierAddress));
-        require(newsArticles[articleId].verifierAddress == address(0), "NewsArticle already exists");
+
+        address verifierAddress = address(0);
+        articleId = keccak256(abi.encode(newsContent, verifierAddress,counter));
+        //require(newsArticles[articleId].verifierAddress == address(0), "NewsArticle already exists");
         newsArticles[articleId] = NewsArticle({
             reward: reward,
             verifierAddress: verifierAddress,
@@ -55,12 +59,14 @@ contract NewsVerification {
             verified: false
         });
         defaultCurrency.safeTransferFrom(msg.sender, address(this), reward);
+        counter += 1;
         emit NewsVerified(articleId, newsContent, reward, verifierAddress);
     }
 
     function requestPayout(bytes32 articleId) public returns (bytes32 assertionId) {
-        require(newsArticles[articleId].verifierAddress != address(0), "NewsArticle does not exist");
+        require(newsArticles[articleId].verifierAddress == address(0), "NewsArticle does not exist");
         uint256 bond = oo.getMinimumBond(address(defaultCurrency));
+        newsArticles[articleId].verifierAddress = msg.sender;
         defaultCurrency.safeTransferFrom(msg.sender, address(this), bond);
         defaultCurrency.safeApprove(address(oo), bond);
         assertionId = oo.assertTruth(
@@ -81,7 +87,7 @@ contract NewsVerification {
             bytes32(0) // No domain.
         );
         assertedNews[assertionId] = articleId;
-        emit RewardRequested(articleId, assertionId);
+        emit RewardPayoutRequested(articleId, assertionId);
     }
 
     function assertionResolvedCallback(bytes32 assertionId, bool assertedTruthfully) public {
@@ -101,6 +107,6 @@ contract NewsVerification {
         if (article.verified) return;
         article.verified = true;
         defaultCurrency.safeTransfer(article.verifierAddress, article.reward);
-        emit RewardPaid(articleId, assertionId);
+        emit RewardPayoutSettled(articleId, assertionId);
     }
 }
